@@ -5,94 +5,96 @@
 	.global HEX_flood_ASM
 	.global HEX_write_ASM
 
-//Takes HEX to clear as input
-HEX_clear_ASM:
-	LDR R1, =HEX_BASE1			
-	LDR R2, =HEX_BASE2 
-	MOV R3, #-1					//R3 is loop counter for display
-	MOV R4, #1					//R4 is the control register
-	MOV R6, #6					//Loop counter for bit
-	LDR R5, [R1]				//value of hex 0 to 3
-	MOV R8, #0xFFFFFFFF
-	MOV R9, #4
-	PUSH {LR}	
-	BL LOOP_CLEAR
-	POP {LR}					//For the sake of clarity
-	LDR R5, [R2]
-	MOV R3, #-1
-	MOV R9, #2
-	PUSH {LR}
-	BL LOOP_CLEAR
-	POP {LR}
-	BX LR	
+HEX_clear_ASM:	LDR R1, =HEX_BASE1		//Contains adresses for HEX0-3
+				LDR R2, =HEX_BASE2		//Contains adresses for HEX4-5
+				MOV R3, #6				//Loop counter
+				MOV R4, #1				//Control that compares with R0 to check if display needs to be changed
+				MOV R6, #0				//Use 0 to clear the needed byte
 
-LOOP_CLEAR:
-	ADD R3, R3, #1
-	CMP R3, R9
-	BXEQ LR
-	MOV R7, R3
-	LSL R7, #3
-	BIC R7, R9, R7
-	AND R3, R4, R0
-	CMP R3, #0
-	LSL R4, #1
-	BEQ LOOP_CLEAR
-	PUSH {LR}
-	BL BIT_CLEAR
-	POP {LR}
-	B LOOP_CLEAR
+LOOP_CLEAR_03:	CMP R3, #2				//Checks if still in lower displays
+				BEQ LOOP_CLEAR_45		//If not go to upper displays
+				ANDS R5, R4, R0 		//Compare R0 with control to know if checked desplay needs to be cleared
+				BEQ CLEAR_03			//If = 0, skip clearing
+				STRB R6, [R1]			//Else, insert 1 byte of 0 at memory location R1	
 
-BIT_CLEAR:
-	SUBS R6, R6, #1
-	BXMI LR
-	AND R8, R8, R7
-	B BIT_CLEAR
+CLEAR_03:		LSL R4, #1				//Shift R4 to check next display
+				ADD R1, R1, #1			//Increment R1 to get the adress if next display
+				SUBS R3, R3, #1			//Decrement the loop counter
+				BGT LOOP_CLEAR_03		//Keep looping in lower displays
 
-//Takes HEX to flood as input
+LOOP_CLEAR_45:	CMP R3, #0				//Check if finished with all displays
+				BEQ END_CLEAR					//If so, end
+				ANDS R5, R4, R0			//Compare R0 with control to know if checked desplay needs to be cleared
+				BEQ CLEAR_45			//If = 0, skip clearing
+				STRB R6, [R2]			//Else, insert 1 byte of 0 at memory location R1	
 
-HEX_flood_ASM:
-		//LDR R1, =HEX_3_0_BASE
-		//LDR R2, =HEX_5_4_BASE
-		//store max vals in every display
-		//MOV R3, #63
-		//STR R3,[R1]
-		//BX LR
-	   	LDR R1, =HEX_BASE1 //base address for display 3 - 0
-	   	LDR R2, =HEX_BASE2 //base address for display 5 - 4
-	   	MOV R3, #0 //r3 is ctr
-	   	MOV R5, #1 //this will be the compare bit, starting at the 0th display
+CLEAR_45:		LSL R4, #1				//Shift R4 to check next display
+				ADD R2, R2, #1			//Increment R2 to get the adress if next display
+				SUBS R3, R3, #1			//Decrement loop counter
+				BGT LOOP_CLEAR_45		//Keep looping in upper displays
 
-floop: 	AND R4, R0, R5 //AND the two operands
-	   	CMP R4, #0	//if its non-zero go to clear
-	   	BLGT flood
-		LSL R5, #1 //shift left by 1
-	   	ADD R3, R3, #1 //end of loop
-       	CMP R3, #6 //this might be #5 (as before)
-	   	BLT floop
-	   	BX LR
+END_CLEAR:			BX LR
 
+HEX_flood_ASM:	LDR R1, =HEX_BASE1		//Contains adresses for HEX0-3
+				LDR R2, =HEX_BASE2		//Contains adresses for HEX4-5
+				MOV R3, #6				//Loop counter
+				MOV R4, #1				//Control that compares with R0 to check if display needs to be changed
+				MOV R6, #0x7F			//Use R6 to flood desired 8 bits
 
-flood: 	PUSH {LR}
-	   	CMP R5, #8	//if greater than 8 branch to 5th4th disp
-	   	BLGT flood_upr //branch to upper //never goes in here, r5 doesnt get bigger than 8?
-	   	BLLE flood_lwr //branch to lower
-	  	POP {LR}
-	   	BX LR
+LOOP_FLOOD_03:	CMP R3, #2				//Checks if still in lower displays
+				BEQ LOOP_CLEAR_45		//BUG?*****************************************
+				ANDS R5, R4, R0 		//Check which display to flood
+				BEQ BOTTOM_F			//If = 0, no need to flood
+				STRB R6, [R1]			//Else, flood display being checked
 
-flood_upr:
-		MOV R6, #127 // 7 bits of 1s (looks like an 8)
-		SUB R7, R3, #4 //poor mans modulus, reset "r3" to 0
-		STRB R6, [R2, R7]
-		BX LR 
-		//B bck
+BOTTOM_F:		LSL R4, #1				//Shit control by 1 to check next display
+				ADD R1, R1, #1			//Point to the adress of next display
+				SUBS R3, R3, #1			//Decrement loop counter
+				BGT LOOP_FLOOD_03		//Loop back to lower displays
 
-flood_lwr:
-		MOV R6, #63 //6 bits of 1s (looks like a zero)
-		STRB R6, [R1, R3]
-		BX LR 
-		//B bck
+LOOP_TOP_F:		CMP R3, #0				//Check if finished checking all displays
+				BEQ END_FLOOD			//If so, end
+				ANDS R5, R4, R0			//Else, check if display needs to be flooded
+				BEQ TOP_F				//If = 0, no need to be flooded
+				STRB R6, [R2]			//Else, flood designated upper display
 
-//Takes HEX to write and value to write as input
-HEX_write_ASM:
+TOP_F:			LSL R4, #1				//Shift control to point to next display
+				ADD R2, R2, #1			//Point to the adress of next display
+				SUBS R3, R3, #1			//Decrement counter
+				BGT LOOP_TOP_F			//Loop back to upper displays
 
-	.end
+END_FLOOD:		BX LR
+
+HEX_flood_ASM:	LDR R2, =HEX_BASE1		//Contains adresses for HEX0-3
+				LDR R3, =HEX_BASE2		//Contains adresses for HEX4-5
+				LDR R7, =HEX_VAL		//Start adress of the list of all values for 16 hex displays
+				LDRB R8, [R7, R1]		//Load corresponding value of val in R8
+				MOV R4, #6				//Loop counter
+				MOV R5, #1				//Control which compares with R0 to check which hex to change
+
+LOOP_W_LOWER:	CMP R4, #2				//Check if still in lower displays
+				BEQ LOOP_W_UPPER		//If not go to upper displays
+				ANDS R6, R5, R0 		//Compare R0 to control to know if selected bit needs to be changed
+				BEQ W_LOWER				//If = 0, no changes
+				STRB R8, [R2]			//Else, store val in corresponding display address
+
+W_LOWER:		LSL R5, #1				//Shift control to check next display
+				ADD R2, R2, #1			//Increment adress to next display
+				SUBS R4, R4, #1			//Decrement loop counter 
+				BGT LOOP_W_LOWER		//Go back to lower displays
+
+LOOP_W_UPPER:	CMP R4, #0				//Check f all displays have been checked
+				BEQ END_W				//If so, end
+				ANDS R6, R5, R0			//Else, check if current display needs to be changed
+				BEQ W_UPPER				//If not, no changes
+				STRB R8, [R3]			//If so, change
+
+W_UPPER:		LSL R5, #1				//Shift control to check next display
+				ADD R3, R3, #1			//Increment adress to next display
+				SUBS R4, R4, #1			//Decrement loop counter
+				BGT LOOP_W_UPPER		//Go back to upper displays
+
+END_W:			BX LR
+
+HEX_VAL: 		.byte 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x67, 0x77, 0x7F, 0x39, 0x3F, 0x79, 0x71
+				.end
