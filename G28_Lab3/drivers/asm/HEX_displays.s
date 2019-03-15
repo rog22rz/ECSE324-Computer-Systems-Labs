@@ -23,7 +23,7 @@ CLEAR_03:		LSL R4, #1				//Shift R4 to check next display
 				BGT LOOP_CLEAR_03		//Keep looping in lower displays
 
 LOOP_CLEAR_45:	CMP R3, #0				//Check if finished with all displays
-				BEQ END_CLEAR					//If so, end
+				BEQ END_CLEAR			//If so, end
 				ANDS R5, R4, R0			//Compare R0 with control to know if checked desplay needs to be cleared
 				BEQ CLEAR_45			//If = 0, skip clearing
 				STRB R6, [R2]			//Else, insert 1 byte of 0 at memory location R1	
@@ -33,16 +33,16 @@ CLEAR_45:		LSL R4, #1				//Shift R4 to check next display
 				SUBS R3, R3, #1			//Decrement loop counter
 				BGT LOOP_CLEAR_45		//Keep looping in upper displays
 
-END_CLEAR:			BX LR
+END_CLEAR:		BX LR
 
 HEX_flood_ASM:	LDR R1, =HEX_BASE1		//Contains adresses for HEX0-3
 				LDR R2, =HEX_BASE2		//Contains adresses for HEX4-5
 				MOV R3, #6				//Loop counter
 				MOV R4, #1				//Control that compares with R0 to check if display needs to be changed
-				MOV R6, #0x7F			//Use R6 to flood desired 8 bits
+				MOV R6, #0xFF			//Use R6 to flood desired 8 bits
 
 LOOP_FLOOD_03:	CMP R3, #2				//Checks if still in lower displays
-				BEQ LOOP_CLEAR_45		//BUG?*****************************************
+				BEQ LOOP_TOP_F			//If not go to upper displays
 				ANDS R5, R4, R0 		//Check which display to flood
 				BEQ BOTTOM_F			//If = 0, no need to flood
 				STRB R6, [R1]			//Else, flood display being checked
@@ -65,7 +65,7 @@ TOP_F:			LSL R4, #1				//Shift control to point to next display
 
 END_FLOOD:		BX LR
 
-HEX_flood_ASM:	LDR R2, =HEX_BASE1		//Contains adresses for HEX0-3
+HEX_write_ASM:	LDR R2, =HEX_BASE1		//Contains adresses for HEX0-3
 				LDR R3, =HEX_BASE2		//Contains adresses for HEX4-5
 				LDR R7, =HEX_VAL		//Start adress of the list of all values for 16 hex displays
 				LDRB R8, [R7, R1]		//Load corresponding value of val in R8
