@@ -11,6 +11,7 @@
 
 //clear pixel buffer
 VGA_clear_pixelbuff_ASM:
+	PUSH {R2-R7, LR}
 	LDR R3, =CHAR_PIXEL_BASE
 	MOV R4, #0		//Move 0 into register to clear
 	MOV R5, #1 		//x counter
@@ -37,6 +38,7 @@ ClearPixelBuffLoopY:
 
 //clear character buffer
 VGA_clear_charbuff_ASM:
+	PUSH {R2-R7, LR}
 	LDR R3, =CHAR_CHAR_BASE
 	MOV R4, #0				//Move 0 into adress to clear
 	MOV R5, #1
@@ -61,6 +63,7 @@ ClearCharBuffLoopY:
 	B ClearCharBuffLoopX
 
 VGA_write_char_ASM:
+	PUSH {R2-R7, LR}
 	LDR R3, =CHAR_CHAR_BASE		//R3 contains char buff base adress
 	CMP R0, #79					//Check if x value if ok
 	BGT END
@@ -80,6 +83,7 @@ STORE_CHAR:
 	B END
 
 VGA_write_byte_ASM:
+	PUSH {R2-R7, LR}
 	LDR R3, =CHAR_CHAR_BASE		//R3 contains char buff base address
 	CMP R0, #79					//Check if x value if ok
 	BGT END
@@ -126,6 +130,7 @@ STORE_SECOND_HEX:
 	B END
 
 VGA_draw_point_ASM:
+	PUSH {R2-R7, LR}
 	LDR R3, =CHAR_PIXEL_BASE		//R3 contains pixel buff base adress
 	LDR R4, =319
 	CMP R0, R4					//Check if x value if ok
@@ -147,4 +152,5 @@ STORE_PIXEL:
 	B END
 
 END:
+	POP {R2-R7, LR}
 	BX LR
