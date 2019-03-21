@@ -11,10 +11,9 @@ read_PS2_data_ASM:
 	AND R2, R2, #1				//Get only the first bit which is RVALID
 	CMP R2, #0					//If = 0, return
 	BEQ END
-	LDR R5, [R1]				//Load the value in data
-	STR R5, [R4]				//Store the value in the adress initialy passed in R0
+	LDRB R5, [R1]				//Load the value in data
+	STRB R5, [R4]				//Store the value in the adress initialy passed in R0
 	MOV R0, #1					//Return 1
-	MOV R2, #0
 	B END	
 
 END:

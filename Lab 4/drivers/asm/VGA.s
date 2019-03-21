@@ -48,7 +48,7 @@ ClearCharBuffLoopX:
 	CMP R5, #80			
 	BGT ClearCharBuffLoopY		//if 320 iterations passed, loop to next y
 	STRB R4, [R3]			//store black colour at proper pixel
-	ADD R3, R3, #1			//increment by 2 to go to next x address
+	ADD R3, R3, #1			//increment by 1 to go to next x address
 	ADD R5, R5, #1			//add 1 to x counter
 	B ClearCharBuffLoopX
 
@@ -101,7 +101,6 @@ FIND_BYTE_ADRESS:
 
 FIND_FIRST_HEX:
 	LSR R6, #4					//Get the first 4 bit 
-	AND R6, R6, #0xF
 	CMP R6, #10					//Check if value is a letter
 	BGE FIRST_LETTER
 	ADD R7, R6, #0x30			//R7 Store ascii value of the number

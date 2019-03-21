@@ -10,7 +10,7 @@ Audio_Output_ASM:
 	MOV R2, R0				//copy the signal value into R2
 	MOV R0, #0				//set the boolean to 0
 
-	LDRB R3, [R1, #3]      	//load the value of WSRC into R3
+	LDRB R3, [R1, #2]      	//load the value of WSRC into R3
 	CMP R3, #0				//if WSRC is full and doesn't have available space for output
 	BEQ End
 	LDRB R3, [R1, #3] 		//load the value of WSLC into R3
