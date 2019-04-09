@@ -9,65 +9,70 @@
 #include "./drivers/inc/ps2_keyboard.h"
 #include "./drivers/inc/HEX_displays.h"
 #include "./drivers/inc/slider_switches.h"
+#include <math.h>
+//#include <stdio.h>
 
 
-int amplitude = 1;
-char previous;	
-float frequency[8] = {130.813, 146.832, 164.814, 174.614, 195.998, 220.000, 246.942, 261.626};
+int amplitude = 1;		//Amplitude to control volume	
+char previous;			//Save previous make code to compare with current one
+float frequency[8] = {130.813, 146.832, 164.814, 174.614, 195.998, 220.000, 246.942, 261.626};		//All necessary frequencies
 
-int keyboard[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+int keyboard[8] = {0, 0, 0, 0, 0, 0, 0, 0};		//Array to keep track of buttons that are getting pressed	
 
 int signal(float freq, int time) {
-	// calculate the floating value for the index
-	float a = (freq*time);
-	int b = (int) a/48000;
-	float index = a-(b*48000);
-	// extract the integer and remainding decimal
-	int integer = (int) index;
-	float remain = index - integer;
+	
+	//simulate modulo process
+	int multiplicity = (int) (freq*time)/48000;		//calculate the number of times 48k divides freq*time
+	float index = freq*time-(multiplicity*48000);	//find the remainder
+	
+	
+	int integer = (int) index;						//remove decimal points of index
+	float decimal = index - integer;				//get decimal points
 
-	// calculate the signal by multiplying by the sound amplitude
-	float total = (1-remain)*sine[integer] + remain*sine[integer+1];
-	return (int) (total*amplitude);
+	//linear interpolation works even if index is not an integer
+	float signal = (1-decimal)*sine[integer] + decimal*sine[integer+1];
+	
+	return (int) (signal);
 
 }
 
-float calculateSignal(int time) {
+float calculateSignal(int counter) {
 	int i;
-	float note = 0;
-	// loop through all keys and check if key is pressed
+	float totalSignal = 0;
+	
 	for(i = 0; i < 8; i++){
 		if(keyboard[i] == 1){
-			note += signal(frequency[i], time);
+			totalSignal += signal(frequency[i], counter);	//add signals of all keys that were pressed
 		}
 	}
-
-	note *= amplitude;
-	return note;
+	//return the sum of signals * amplitude0-
+	return totalSignal * amplitude;
 }
 
-// calculate the signal played from wavetable give a time and frequency
+void displayWave() {
 
-
-// display the wave onto the screen when keys are pressed
-void displayWave(float freq) {
-	// clear the display before drawing the next wave
+	float freq;
+	int i;
+	//Sum up freq 
+	for(i = 0; i<8; i++) {
+		freq = freq + keyboard[i]*frequency[i];
+	}
 	VGA_clear_pixelbuff_ASM();
-	// initialize the colour and position
+
 	short colour = 0xFFFFFF;
 	int x, y;
-	// 48000 is the total sine wave, divide this by the number of x pixels per full iteration, with a base frequency of 60 
-	int seg = 48000/(320.00*60/freq);
-	// initialize x position 
-	int time_pos = 0;
 
-	// iterate through the display to print out the wave
+	// 48000 is the total sine wave, divide this by the number of x pixels per full iteration, with a base frequency of 60 
+	int seg = 48000/(320.0*60/freq);
+
+	int time_pos = 0;
 	for(x=0; x<320; x++) {
 		// use a sine function in order to calculate the y pixel to draw the pt on 
 		//sine[6000] = the wave for 1/4 of the cycle.    Amplitude = volume affects amplitude of wave. 
 		y = (int) (((float)amplitude)*(float)sine[time_pos]*((float)10/(float)sine[6000])) + 120;
 
-		// draw calculated point in white
+
+		//Draw the point
 		VGA_draw_point_ASM(x, y, colour);
 		// Increment position based on the increment variable. 
 		time_pos += seg; 	
@@ -76,68 +81,68 @@ void displayWave(float freq) {
 			time_pos -= 48000; 
 		} 
 	}
-
-
+	return freq;
 }
 
 //Update the state of keyboard array
 void update(char *input) {
-
+	
+	//Sitch case covering every make and break code of the keyboard
 	switch(*input) {
-		case 0x1C:
+		case 0x1C:	//A
 			keyboard[0] = 0;
-			if(previous != 0xF0) {
+			if(previous != 0xF0) {		//If previous is not 0xF0, then its make code
 				keyboard[0] = 1;
 			}
 			break;
-		case 0x1B:
+		case 0x1B:	//S
 			keyboard[1] = 0;
 			if(previous != 0xF0) {
 				keyboard[1] = 1;
 			}
 			break;
-		case 0x23:
+		case 0x23:	//D
 			keyboard[2] = 0;
 			if(previous != 0xF0) {
 				keyboard[2] = 1;
 			}
 			break;
-		case 0x2B:
+		case 0x2B:	//F
 			keyboard[3] = 0;
 			if(previous != 0xF0) {
 				keyboard[3] = 1;
 			}
 			break;
-		case 0x3B:
+		case 0x3B:	//J
 			keyboard[4] = 0;
 			if(previous != 0xF0) {
 				keyboard[4] = 1;
 			}
 			break;
-		case 0x42:
+		case 0x42:	//K
 			keyboard[5] = 0;
 			if(previous != 0xF0) {
 				keyboard[5] = 1;
 			}
 			break;
-		case 0x4B:
+		case 0x4B:	//L
 			keyboard[6] = 0;
 			if(previous != 0xF0) {
 				keyboard[6] = 1;
 			}
 			break;
-		case 0x4C:
+		case 0x4C:	//;
 			keyboard[7] = 0;
 			if(previous != 0xF0) {
 				keyboard[7] = 1;
 			}
 			break;
-		case 0x79:
+		case 0x4E:	//-
 			if(previous != 0xF0) {
 				amplitude++;
 			}
 			break;
-		case 0x7B:
+		case 0x55:	//=
 			if(previous != 0xF0) {
 				amplitude--;
 			}
@@ -147,15 +152,7 @@ void update(char *input) {
 	}
 }
 
-//Compute frequency
-float getFreq(){
-	float freq;
-	int i;
-	for(i = 0; i<8; i++) {
-		freq = freq + keyboard[i]*frequency[i];
-	}
-	return freq;
-}
+
 
 int main() {
 	//Turning on interupts for timer 0
@@ -169,46 +166,36 @@ int main() {
 	HPS_TIM_config_ASM(&hps_tim);
 
 	// initialization of the variables
-	float sumFreq; // freq of notes
-	char *input;
-	int clock = 0; // keeps track of clock time 
-	float note;	// sum of the signal
+	char *input;	//pointer pointing to most recent make code
+	int counter = 0; 
+	float sumOfSignal;	// sum of the signal
 
 	while(1) {
-		// read the data from the keyboard
-		if(read_ps2_data_ASM(input)) {
-			// check if the previous frequency changed
-			if(previous != *input) {
-				// get the frequency for the note of the keyboard clicks
-				update(input);
-				sumFreq = getFreq();
-				displayWave(sumFreq);
-
-				// check when the stop code is present to know when key is released
+		if(read_ps2_data_ASM(input)) {	//Read the data from the keyboard
+			if(previous != *input) {	//Check if the state of the button has changed
+				update(input);	//update the state of keyboard
+				displayWave();
+				//Check of a key was released
 				if(previous == 0xF0) {
-					// allow the same key to be clicked simultaneously
-					previous = 0;
+					previous = 0;		//If key is break code, set previous to 0
 				} else {
-					// else put in the data clicked
-					previous = *input;
+					previous = *input;	//else update previous
 				}
 			}
 		}
-		note = calculateSignal(clock);
+		sumOfSignal = calculateSignal(counter);		//compute signal to write to audio
 
-		// check interrupt happens 
-		if(TIM0_FLAG) {
-		// write the audio data to the signal
-			audio_write_data_ASM(note, note);
-			// increment clock value
-			clock++;	
-			// reset the clock when it reaches the e
-			if(clock > (int) (48000/sumFreq)) {
-				clock = 0;
+		
+		if(TIM0_FLAG) {		// Check the timer interrupt flag
+			TIM0_FLAG = 0;	// reset interrupt flag
+			audio_write_data_ASM(sumOfSignal, sumOfSignal);		// write the audio data 
+			counter++;		// increment counter value
+			if(counter == 48000) {		// reset the counter when it reaches the end
+				counter = 0;
 			}
-			// reset the interrupt flag back to 0
-			TIM0_FLAG = 0;
 		}
+
+		
 	}
 	return 0;
 }
