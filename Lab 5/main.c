@@ -81,7 +81,6 @@ void displayWave() {
 			time_pos -= 48000; 
 		} 
 	}
-	return freq;
 }
 
 //Update the state of keyboard array
